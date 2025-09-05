@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from "react";
 import api from "@/utils/refreshAccess";
-import toast from "react-hot-toast";
 import { Mail, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 

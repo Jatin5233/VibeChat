@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { connect } from "@/dbConfig/dbConfig";
 import Message from "@/models/msgModel";
-import Chat from "@/models/chatModel";
-import { verifyToken } from "@/utils/verifyToken";
-import { io } from "backend/server";
+
 
 export async function GET(
   req: Request,

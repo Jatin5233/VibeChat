@@ -2,7 +2,6 @@
 import { NextResponse } from "next/server";
 import { connect } from "@/dbConfig/dbConfig";
 import Chat from "@/models/chatModel";
-import User from "@/models/userModel";
 import { verifyToken } from "@/middlewares/authMiddleware";
 
 export async function POST(req: Request) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState,  useRef, useCallback } from "react";
 import { useTheme } from "@/context/themeContext";
 import { themes } from "@/theme";
 import { Search, X } from "lucide-react";
