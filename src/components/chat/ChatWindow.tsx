@@ -8,6 +8,7 @@ import { useSocket } from "@/context/socketConfig";
 import { useTheme } from "@/context/themeContext";
 import { themes } from "@/theme";
 import { downloadFileFromUrl, getFileIcon, formatFileSize } from "@/utils/downloadUtils";
+import api from "@/utils/refreshAccess";
 
 interface IAttachment {
   url: string;
@@ -44,7 +45,6 @@ interface ChatWindowProps {
   setSelectedChat: (chat: any | null) => void;
   onToggleSidebar?: () => void;
 }
-
 
 function FileAttachment({ attachment }: { attachment: IAttachment }) {
   const { theme } = useTheme();
@@ -172,11 +172,12 @@ export default function ChatWindow({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [editedMessage, setEditedMessage] = useState("");
 
   const { socket } = useSocket();
   const { theme } = useTheme();
   const t = themes[theme];
-  
 
   // Enhanced device detection
   useEffect(() => {
@@ -190,6 +191,114 @@ export default function ChatWindow({
     window.addEventListener('resize', checkDeviceType);
     return () => window.removeEventListener('resize', checkDeviceType);
   }, []);
+
+  // Set edited message when editing starts
+  useEffect(() => {
+    if (editingMessageId) {
+      const messageToEdit = messages.find(msg => msg._id === editingMessageId);
+      if (messageToEdit) {
+        setEditedMessage(messageToEdit.content || "");
+        setNewMessage(messageToEdit.content || "");
+      }
+    } else {
+      setEditedMessage("");
+    }
+  }, [editingMessageId, messages, setNewMessage]);
+
+  // Enhanced edit message function using api
+  const handleEditMessage = async () => {
+    if (!editingMessageId || !editedMessage.trim()) return;
+
+    try {
+      
+      
+      const response = await api.put(`/api/messages/${editingMessageId}`, {
+        content: editedMessage.trim()
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true // Include cookies for authentication
+      });
+
+      if (response.status === 200) {
+        // Emit socket event for real-time update
+        if (socket && selectedChat?._id) {
+          socket.emit('message_edited', {
+            chatId: selectedChat._id,
+            messageId: editingMessageId,
+            newContent: editedMessage.trim(),
+            editedAt: new Date().toISOString()
+          });
+        }
+
+        // Clear editing state
+        setEditingMessageId(null);
+        setNewMessage("");
+        setEditedMessage("");
+        
+        console.log("✅ Message edited successfully");
+      }
+    } catch (error: any) {
+      console.error("❌ Error editing message:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Failed to edit message";
+      alert(`Failed to edit message: ${errorMessage}`);
+    }
+  };
+
+  // Enhanced delete message function using api
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!messageId) return;
+
+    // Show confirmation dialog
+    const confirmDelete = window.confirm("Are you sure you want to delete this message?");
+    if (!confirmDelete) return;
+
+    setIsDeleting(messageId);
+
+    try {
+     
+      
+      const response = await api.delete(`/api/messages/${messageId}`, {
+        withCredentials: true // Include cookies for authentication
+      });
+
+      if (response.status === 200) {
+        // Emit socket event for real-time update
+        if (socket && selectedChat?._id) {
+          socket.emit('message_deleted', {
+            chatId: selectedChat._id,
+            messageId: messageId,
+            deletedAt: new Date().toISOString()
+          });
+        }
+
+        console.log("✅ Message deleted successfully");
+      }
+    } catch (error: any) {
+      console.error("❌ Error deleting message:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Failed to delete message";
+      alert(`Failed to delete message: ${errorMessage}`);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  // Enhanced send/edit handler
+  const handleSendOrEdit = () => {
+    if (editingMessageId) {
+      handleEditMessage();
+    } else {
+      sendMessage();
+    }
+  };
+
+  // Cancel edit handler
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setNewMessage("");
+    setEditedMessage("");
+  };
 
   const handleProfileUpdated = useCallback(
     (updatedUser: any) => {
@@ -243,7 +352,12 @@ export default function ChatWindow({
   }, [socket, handleProfileUpdated, handleAccountDeleted]);
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setNewMessage((prev) => prev + emojiData.emoji);
+    if (editingMessageId) {
+      setEditedMessage((prev) => prev + emojiData.emoji);
+      setNewMessage((prev) => prev + emojiData.emoji);
+    } else {
+      setNewMessage((prev) => prev + emojiData.emoji);
+    }
     setShowEmojiPicker(false);
   };
 
@@ -293,8 +407,11 @@ export default function ChatWindow({
     if (e.key === 'Escape') {
       setShowEmojiPicker(false);
       setContextMenu(null);
+      if (editingMessageId) {
+        handleCancelEdit();
+      }
     }
-  }, []);
+  }, [editingMessageId]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyPress);
@@ -304,35 +421,32 @@ export default function ChatWindow({
   if (!selectedChat) {
     return (
       <div className={`
-  flex flex-1 items-center justify-center
-  ${t.subtext} p-4 text-center
-  min-h-[50vh] sm:min-h-0
-`}>
-  <div className="max-w-md mx-auto">
-    {/* UPDATED: Themed background for the emoji */}
-    <div className={`
-      mx-auto mb-4 flex h-24 w-24 items-center justify-center
-      rounded-full text-4xl shadow-lg
-      sm:mb-6 sm:h-28 sm:w-28 sm:text-5xl
-      ${t.card}
-    `}>
-      <span>💬</span>
-    </div>
+        flex flex-1 items-center justify-center
+        ${t.subtext} p-4 text-center
+        min-h-[50vh] sm:min-h-0
+      `}>
+        <div className="max-w-md mx-auto">
+          <div className={`
+            mx-auto mb-4 flex h-24 w-24 items-center justify-center
+            rounded-full text-4xl shadow-lg
+            sm:mb-6 sm:h-28 sm:w-28 sm:text-5xl
+            ${t.card}
+          `}>
+            <span>💬</span>
+          </div>
 
-    {/* UPDATED: Uses the theme's primary text color */}
-    <h2 className={`
-      text-lg font-semibold
-      sm:text-xl lg:text-2xl
-      mb-2 sm:mb-4
-      ${t.text}
-    `}>
-      Welcome to VibeChat!
-    </h2>
+          <h2 className={`
+            text-lg font-semibold
+            sm:text-xl lg:text-2xl
+            mb-2 sm:mb-4
+            ${t.text}
+          `}>
+            Welcome to VibeChat!
+          </h2>
 
-    {/* This part correctly uses the subtext color */}
-    <p className="text-sm sm:text-base opacity-75 mb-4">
-      Select a chat from the sidebar or search for someone to start messaging
-    </p>
+          <p className="text-sm sm:text-base opacity-75 mb-4">
+            Select a chat from the sidebar or search for someone to start messaging
+          </p>
           {isMobile && (
             <button
               onClick={onToggleSidebar}
@@ -386,8 +500,6 @@ export default function ChatWindow({
           >
             <ArrowLeft size={20} />
           </button>
-          
-         
         </div>
         
         {/* User info */}
@@ -436,106 +548,116 @@ export default function ChatWindow({
         id="messages-container"
       >
         {messages.map((msg, idx) => {
-  const senderId =
-    typeof msg?.sender === "object" && msg.sender?._id
-      ? msg.sender._id.toString()
-      : typeof msg?.sender === "string"
-      ? msg.sender
-      : "";
-  const isSender = currentUserId ? senderId === currentUserId.toString() : false;
-  const senderName = typeof msg.sender === 'object' ? msg.sender.username : 'Unknown';
-  const senderAvatar = typeof msg.sender === 'object' ? msg.sender.profilePic : '/default-avatar.png';
+          const senderId =
+            typeof msg?.sender === "object" && msg.sender?._id
+              ? msg.sender._id.toString()
+              : typeof msg?.sender === "string"
+              ? msg.sender
+              : "";
+          const isSender = currentUserId ? senderId === currentUserId.toString() : false;
+          const senderName = typeof msg.sender === 'object' ? msg.sender.username : 'Unknown';
+          const senderAvatar = typeof msg.sender === 'object' ? msg.sender.profilePic : '/default-avatar.png';
+          const isBeingDeleted = isDeleting === msg._id;
 
-  return (
-    <div
-      key={msg?._id ?? `msg-${idx}`}
-      className={`
-        flex items-end gap-2 sm:gap-3 group relative
-        ${isSender ? "justify-end" : "justify-start"}
-        touch-manipulation
-      `}
-    >
-      {!isSender && (
-        <img 
-          src={senderAvatar || '/default-avatar.png'} 
-          alt={senderName} 
-          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0" 
-        />
-      )}
-      
-      <div
-        className={`
-          p-2 sm:p-3 md:p-4 rounded-2xl
-          max-w-[85%] sm:max-w-[75%] md:max-w-md lg:max-w-lg
-          shadow-md
-          ${isSender ? t.messageSender : t.messageReceiver}
-          break-words
-          ${isSender ? 'cursor-context-menu' : ''}
-        `}
-        onContextMenu={(e) => {
-          // Only handle context menu for sender messages
-          if (!isSender || !msg._id) {
-            return; // Let the default context menu show for non-sender messages
-          }
-          
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const rect = messagesContainerRef.current?.getBoundingClientRect();
-          const x = isMobile ? e.clientX : Math.min(e.clientX, window.innerWidth - 200);
-          const y = rect ? Math.max(e.clientY - rect.top, 0) : e.clientY;
-          setContextMenu({ x, y, msgId: msg._id, content: msg.content || "" });
-        }}
-      >
-        {!isSender && (
-          <span className={`block text-xs font-semibold mb-1 ${t.accent}`}>
-            {senderName}
-          </span>
-        )}
-        
-        {msg?.content && !msg?.attachments?.length && (
-          <p className="whitespace-pre-wrap break-words text-sm sm:text-base leading-relaxed">
-            {msg.content}
-          </p>
-        )}
-        
-        {msg?.attachments?.length > 0 && msg?.content && (
-          <p className={`text-sm ${t.subtext} mb-2 break-words`}>
-            {msg.content}
-          </p>
-        )}
-        
-        {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-          <div className="mt-2 space-y-2">
-            {msg.attachments.map((attachment: IAttachment, i: number) => (
-              <FileAttachment key={`file-${i}`} attachment={attachment} />
-            ))}
-          </div>
-        )}
-        
-        <span className={`
-          block text-xs mt-1 text-right opacity-70
-          ${t.subtext}
-        `}>
-          {msg?.createdAt ? 
-            new Date(msg.createdAt).toLocaleTimeString([], { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: !isMobile 
-            }) : ""}
-        </span>
-      </div>
-      
-      {isSender && (
-        <img 
-          src={senderAvatar || '/default-avatar.png'} 
-          alt={senderName} 
-          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0" 
-        />
-      )}
-    </div>
-  );
-})}
+          return (
+            <div
+              key={msg?._id ?? `msg-${idx}`}
+              className={`
+                flex items-end gap-2 sm:gap-3 group relative
+                ${isSender ? "justify-end" : "justify-start"}
+                touch-manipulation
+                ${isBeingDeleted ? 'opacity-50 pointer-events-none' : ''}
+              `}
+            >
+              {!isSender && (
+                <img 
+                  src={senderAvatar || '/default-avatar.png'} 
+                  alt={senderName} 
+                  className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0" 
+                />
+              )}
+              
+              <div
+                className={`
+                  p-2 sm:p-3 md:p-4 rounded-2xl
+                  max-w-[85%] sm:max-w-[75%] md:max-w-md lg:max-w-lg
+                  shadow-md
+                  ${isSender ? t.messageSender : t.messageReceiver}
+                  break-words
+                  ${isSender ? 'cursor-context-menu' : ''}
+                  ${isBeingDeleted ? 'animate-pulse' : ''}
+                `}
+                onContextMenu={(e) => {
+                  // Only handle context menu for sender messages
+                  if (!isSender || !msg._id || isBeingDeleted) {
+                    return; // Let the default context menu show for non-sender messages
+                  }
+                  
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  const rect = messagesContainerRef.current?.getBoundingClientRect();
+                  const x = isMobile ? e.clientX : Math.min(e.clientX, window.innerWidth - 200);
+                  const y = rect ? Math.max(e.clientY - rect.top, 0) : e.clientY;
+                  setContextMenu({ x, y, msgId: msg._id, content: msg.content || "" });
+                }}
+              >
+                {!isSender && (
+                  <span className={`block text-xs font-semibold mb-1 ${t.accent}`}>
+                    {senderName}
+                  </span>
+                )}
+                
+                {isBeingDeleted && (
+                  <div className="flex items-center gap-2 text-xs opacity-60 mb-1">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                    <span>Deleting...</span>
+                  </div>
+                )}
+                
+                {msg?.content && !msg?.attachments?.length && (
+                  <p className="whitespace-pre-wrap break-words text-sm sm:text-base leading-relaxed">
+                    {msg.content}
+                  </p>
+                )}
+                
+                {msg?.attachments?.length > 0 && msg?.content && (
+                  <p className={`text-sm ${t.subtext} mb-2 break-words`}>
+                    {msg.content}
+                  </p>
+                )}
+                
+                {Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {msg.attachments.map((attachment: IAttachment, i: number) => (
+                      <FileAttachment key={`file-${i}`} attachment={attachment} />
+                    ))}
+                  </div>
+                )}
+                
+                <span className={`
+                  block text-xs mt-1 text-right opacity-70
+                  ${t.subtext}
+                `}>
+                  {msg?.createdAt ? 
+                    new Date(msg.createdAt).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: !isMobile 
+                    }) : ""}
+                </span>
+              </div>
+              
+              {isSender && (
+                <img 
+                  src={senderAvatar || '/default-avatar.png'} 
+                  alt={senderName} 
+                  className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0" 
+                />
+              )}
+            </div>
+          );
+        })}
         <div ref={messageEndRef} className="h-1" />
       </div>
 
@@ -552,7 +674,7 @@ export default function ChatWindow({
               setContextMenu(null);
             }}
             onDelete={() => {
-              handleDelete(contextMenu.msgId);
+              handleDeleteMessage(contextMenu.msgId);
               setContextMenu(null);
             }}
             onClose={() => setContextMenu(null)}
@@ -579,10 +701,7 @@ export default function ChatWindow({
             </span>
             <button 
               type="button" 
-              onClick={() => { 
-                setEditingMessageId(null); 
-                setNewMessage(""); 
-              }}
+              onClick={handleCancelEdit}
               className="text-yellow-500 hover:text-yellow-300 p-1 rounded touch-manipulation"
             >
               <X size={16} />
@@ -593,7 +712,7 @@ export default function ChatWindow({
         <form
           onSubmit={(e) => { 
             e.preventDefault(); 
-            sendMessage(); 
+            handleSendOrEdit(); 
           }}
           className="flex gap-2 items-end relative"
         >
@@ -606,8 +725,10 @@ export default function ChatWindow({
                 p-2 sm:p-2.5 rounded-full ${t.hover}
                 flex items-center justify-center
                 touch-manipulation min-w-[40px] min-h-[40px]
+                ${editingMessageId ? 'opacity-50 cursor-not-allowed' : ''}
               `}
               aria-label="Attach file"
+              disabled={!!editingMessageId}
             >
               <Paperclip size={isMobile ? 16 : 18} />
             </button>
@@ -665,8 +786,13 @@ export default function ChatWindow({
             <input
               type="text"
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                if (editingMessageId) {
+                  setEditedMessage(e.target.value);
+                }
+              }}
+              placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
               className={`
                 flex-1 p-2 sm:p-3 md:p-3.5
                 rounded-lg sm:rounded-xl
@@ -677,6 +803,7 @@ export default function ChatWindow({
                 ${t.text}
                 min-w-0
                 touch-manipulation
+                ${editingMessageId ? 'border-yellow-500/50' : ''}
               `}
               disabled={!selectedChat}
               maxLength={1000}
@@ -693,14 +820,16 @@ export default function ChatWindow({
                 touch-manipulation
                 min-w-[44px] min-h-[44px]
                 ${newMessage.trim() ? 
-                  `${t.button} hover:scale-105 active:scale-95` : 
+                  `${editingMessageId ? 'bg-yellow-600 hover:bg-yellow-500' : t.button} hover:scale-105 active:scale-95` : 
                   'bg-gray-600 cursor-not-allowed opacity-50'
                 }
               `}
-              aria-label="Send message"
+              aria-label={editingMessageId ? "Save changes" : "Send message"}
             >
               <Send size={isMobile ? 16 : 18} />
-              <span className="hidden md:inline ml-2">Send</span>
+              <span className="hidden md:inline ml-2">
+                {editingMessageId ? 'Save' : 'Send'}
+              </span>
             </button>
           </div>
         </form>
