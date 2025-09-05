@@ -735,6 +735,7 @@ const onSidebarUpdate = useCallback((msg: any) => {
         handleFileChange={handleFileChange} 
         fileInputRef={fileInputRef}
         setSelectedChat={setSelectedChat}
+        currentUser={currentUser}
       />
     </div>
 

@@ -44,6 +44,7 @@ interface ChatWindowProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   setSelectedChat: (chat: any | null) => void;
   onToggleSidebar?: () => void;
+  currentUser?: any; 
 }
 
 function FileAttachment({ attachment }: { attachment: IAttachment }) {
@@ -160,6 +161,7 @@ export default function ChatWindow({
   fileInputRef,
   setSelectedChat,
   onToggleSidebar,
+  currentUser
 }: ChatWindowProps) {
   const messageEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -205,7 +207,7 @@ export default function ChatWindow({
     }
   }, [editingMessageId, messages, setNewMessage]);
 
-  // Enhanced edit message function using api
+  // Enhanced edit message function using axios
   const handleEditMessage = async () => {
     if (!editingMessageId || !editedMessage.trim()) return;
 
@@ -224,21 +226,26 @@ export default function ChatWindow({
       if (response.status === 200) {
         // Emit socket event for real-time update
         if (socket && selectedChat?._id) {
-          socket.emit('message_edited', {
-            chatId: selectedChat._id,
-            messageId: editingMessageId,
-            newContent: editedMessage.trim(),
-            editedAt: new Date().toISOString()
-          });
-        }
+    // Construct a full message object that matches what the server
+    // and other clients expect to receive.
+    const editedMessagePayload = {
+      _id: editingMessageId,
+      content: editedMessage.trim(),
+      chat: { _id: selectedChat._id }, // Use a nested 'chat' object
+      sender: currentUser,    // Include sender info
+      editedAt: new Date().toISOString(),
+    };
+    
+    // Now the payload matches the server's expectation
+    socket.emit('edit_message', editedMessagePayload);
+  }
 
-        // Clear editing state
-        setEditingMessageId(null);
-        setNewMessage("");
-        setEditedMessage("");
-        
-        console.log("✅ Message edited successfully");
-      }
+  // ... rest of your success logic
+  setEditingMessageId(null);
+  setNewMessage("");
+  setEditedMessage("");
+  console.log("✅ Message edited successfully");
+}
     } catch (error: any) {
       console.error("❌ Error editing message:", error);
       const errorMessage = error.response?.data?.error || error.message || "Failed to edit message";
@@ -266,11 +273,11 @@ export default function ChatWindow({
       if (response.status === 200) {
         // Emit socket event for real-time update
         if (socket && selectedChat?._id) {
-          socket.emit('message_deleted', {
+          socket.emit('delete_message', {
             chatId: selectedChat._id,
-            messageId: messageId,
-            deletedAt: new Date().toISOString()
+            _id: messageId
           });
+          console.log("📡 Emitted delete_message event:", messageId);
         }
 
         console.log("✅ Message deleted successfully");
@@ -663,24 +670,28 @@ export default function ChatWindow({
 
       {/* Context Menu - Enhanced positioning */}
       {contextMenu && (
-        <div className="fixed inset-0 z-30" style={{ pointerEvents: 'none' }}>
-          <ContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            msgId={contextMenu.msgId}
-            content={contextMenu.content}
-            onEdit={() => {
-              handleEdit({ _id: contextMenu.msgId, content: contextMenu.content });
-              setContextMenu(null);
-            }}
-            onDelete={() => {
-              handleDeleteMessage(contextMenu.msgId);
-              setContextMenu(null);
-            }}
-            onClose={() => setContextMenu(null)}
-          />
-        </div>
-      )}
+  <div
+    className="fixed inset-0 z-30"
+    // This div now acts as a backdrop to close the menu on an outside click
+    onClick={() => setContextMenu(null)}
+  >
+    <ContextMenu
+      x={contextMenu.x}
+      y={contextMenu.y}
+      msgId={contextMenu.msgId}
+      content={contextMenu.content}
+      onEdit={() => {
+        handleEdit({ _id: contextMenu.msgId, content: contextMenu.content });
+        setContextMenu(null);
+      }}
+      onDelete={() => {
+        handleDeleteMessage(contextMenu.msgId);
+        setContextMenu(null);
+      }}
+      onClose={() => setContextMenu(null)}
+    />
+  </div>
+)}
 
       {/* Message Input Form - Enhanced for mobile */}
       <div className={`
