@@ -1,42 +1,29 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
-    "noEmit": true,
+    "noEmit": true,                // ✅ keep for Next.js
     "esModuleInterop": true,
-    "module": "commonjs", // ✅ Required for Node.js (server.ts)
-    "moduleResolution": "node", // ✅ Also for Node
+    "module": "esnext",            // ✅ Next.js requires ESNext for bundling
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "next-env.d.ts",
-    "backend/server.ts",
     ".next/types/**/*.ts"
-  ], // ✅ Add "server.ts"
-  "exclude": [
-    "node_modules"
-  ]
+  ],
+  "exclude": ["node_modules", "backend"] // ✅ exclude backend
 }
