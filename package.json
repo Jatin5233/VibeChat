@@ -2,13 +2,11 @@
   "name": "vibechat",
   "version": "0.1.0",
   "private": true,
- "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "server": "ts-node server.ts", 
-    "server:build": "tsc server.ts && node dist/server.js"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "next build && tsc -p backend/tsconfig.json",
+  "start": "node dist/server.js"
+},
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
