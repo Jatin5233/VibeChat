@@ -1,15 +1,22 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",          // ✅ required for Node
-    "rootDir": "./",               // ✅ backend/ is root
-    "outDir": "../dist",           // ✅ compiled JS goes into /dist
+    "module": "commonjs",
+    "rootDir": "../",               // allow backend + src
+    "outDir": "../dist",            // compiled files go into dist/
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "baseUrl": "../",               // so paths resolve from project root
+    "paths": {
+      "@/*": ["src/*"]              // keep same alias as frontend
+    }
   },
-  "include": ["./**/*.ts"],        // ✅ compile backend/*.ts
-  "exclude": ["node_modules"]
+  "include": [
+    "./**/*.ts",
+    "../src/**/*.ts"
+  ],
+  "exclude": ["node_modules", "../dist"]
 }

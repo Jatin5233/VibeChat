@@ -19,6 +19,7 @@ const eslintConfig = [
       "no-unused-vars": "warn",
       "@next/next/no-img-element": "off",
       "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-require-imports": "off"
     }
   }
 ];
