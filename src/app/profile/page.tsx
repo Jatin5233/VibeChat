@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import ProfileView from "@/components/profile/ProfileCard";
-import EditProfileForm from "./edit-profile/page";
-import DeleteAccount from "./delete-profile/page";
+import EditProfileForm from "../../components/profile/edit-profile/page";
+import DeleteAccount from "../../components/profile/delete-profile/page";
 import { useRouter } from "next/navigation";
 import api from "@/utils/refreshAccess";
 import ThemeSelector from "@/components/profile/ThemeSelector";
