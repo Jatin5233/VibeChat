@@ -11,6 +11,7 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
+  theme: "midnight" | "ocean" | "sunset" | "forest" | "galactic" | "cyberpunk";
 }
 
 const UserSchema = new Schema<IUser>(
@@ -23,8 +24,15 @@ const UserSchema = new Schema<IUser>(
     groupsAdmin: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    theme: {
+      type: String,
+      enum: ["midnight", "ocean", "sunset", "forest", "galactic", "cyberpunk"],
+      default: "midnight",
+    },
   },
+
   { timestamps: true }
 );
 
-export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+export default User;

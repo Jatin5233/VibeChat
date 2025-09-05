@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
-    "server.ts",
+    "backend/server.ts",
     ".next/types/**/*.ts"
   ], // ✅ Add "server.ts"
   "exclude": [

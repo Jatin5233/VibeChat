@@ -14,33 +14,32 @@ export default function SetupProfilePage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
+    if (preview) {
+      URL.revokeObjectURL(preview); // Clean up the old preview URL
+    }
     setFile(selectedFile);
-    setPreview(selectedFile ? URL.createObjectURL(selectedFile) : null);
+    if (selectedFile) {
+      setPreview(URL.createObjectURL(selectedFile));
+    } else {
+      setPreview(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!file) {
-      toast.error("Please select a profile picture");
+      toast.error("Please select a profile picture or click Skip");
       return;
     }
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("You must be logged in");
-        setLoading(false);
-        return;
-      }
-
       const formData = new FormData();
-      formData.append("image", file); // must match backend's formData.get("image")
+      formData.append("image", file); // We know 'file' is not null here
 
       await axios.post("/api/users/profile", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        withCredentials: true,
       });
 
       toast.success("Profile picture updated!");
@@ -52,11 +51,27 @@ export default function SetupProfilePage() {
     }
   };
 
+  // This function sends an empty request, which our backend interprets as setting a default image.
+  const handleSkip = async () => {
+    setLoading(true);
+    try {
+      const formData = new FormData(); // Sending empty FormData
+      await axios.post("/api/users/profile", formData, {
+        withCredentials: true,
+      });
+      toast.success("Default profile picture set!");
+      router.push("/chats");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#061226] via-[#0b1730] to-[#0f1b36] p-6 flex items-center justify-center">
       <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        
-        {/* Left side: creative image */}
+        {/* Left side: illustration */}
         <section className="hidden lg:flex justify-center">
           <Image
             src="/images/profile.png"
@@ -94,7 +109,7 @@ export default function SetupProfilePage() {
                     />
                   ) : (
                     <>
-                      <span className="text-4xl">📷</span>
+                      <span className="text-4xl">📸</span>
                       <span className="text-white/70 text-sm mt-1">Upload</span>
                     </>
                   )}
@@ -108,14 +123,25 @@ export default function SetupProfilePage() {
                 />
               </div>
 
-              {/* Save button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-14 rounded-xl bg-gradient-to-r from-[#5ab1ff] to-[#ff6ec4] text-white font-semibold text-lg shadow-lg hover:scale-[1.01] transform transition disabled:opacity-50"
-              >
-                {loading ? "Saving..." : "Save & Continue"}
-              </button>
+              {/* Buttons */}
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={loading}
+                  className="flex-1 h-14 rounded-xl bg-gray-700 text-white font-semibold hover:bg-gray-600 transition"
+                >
+                  Skip
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 h-14 rounded-xl bg-gradient-to-r from-[#5ab1ff] to-[#ff6ec4] text-white font-semibold text-lg shadow-lg hover:scale-[1.01] transform transition disabled:opacity-50"
+                >
+                  {loading ? "Saving..." : "Save"}
+                </button>
+              </div>
             </form>
           </div>
         </aside>

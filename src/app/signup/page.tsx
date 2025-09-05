@@ -1,18 +1,46 @@
 "use client";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { MessageCircle, Sparkles, Users, Zap, Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRouter } from "next/navigation"; // for App Router
-import axios from "axios"
-import toast from "react-hot-toast";
 
+import React, { useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { 
+    LoaderCircle, Github, Linkedin, Instagram,
+    Mail, Lock, Users
+} from "lucide-react";
+
+// Header Component
+const VibeChatHeader = () => (
+  <header className="absolute top-0 left-0 w-full p-4 sm:p-6 z-20">
+    <nav className="container mx-auto flex justify-between items-center">
+      <Link href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+        VibeChat
+      </Link>
+     
+      
+    </nav>
+  </header>
+);
+
+// Footer Component
+const VibeChatFooter = () => (
+  <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-6 z-20">
+    <div className="container mx-auto text-center text-gray-500 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <p>&copy; {new Date().getFullYear()} VibeChat. All rights reserved.</p>
+      <div className="flex items-center gap-4">
+        <Link href="#" className="hover:text-white transition"><Github size={20} /></Link>
+        <Link href="#" className="hover:text-white transition"><Linkedin size={20} /></Link>
+        <Link href="#" className="hover:text-white transition"><Instagram size={20} /></Link>
+      </div>
+    </div>
+  </footer>
+);
 
 const SignUpPage = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [message,setMessage]=useState("")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,169 +50,122 @@ const SignUpPage = () => {
     e.preventDefault();
     setLoading(true);
 
-   try {
-    const res = await axios.post("/api/users/signup", formData);
-
-    if (res.status === 201) {
-      // Show success message briefly
-     toast.success("Account Created Successfully");
-      setTimeout(() => {
-        router.push("/login"); // Redirect to login page
-      }, 1500);
+    try {
+      const res = await axios.post("/api/users/signup", formData);
+      if (res.status === 201) {
+        toast.success("Account Created Successfully");
+        setTimeout(() => {
+          router.push("/login");
+        }, 1500);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Sign up failed");
+    } finally {
+      setLoading(false);
     }
-  } catch (error: any) {
-    if (error.response) {
-      toast.error(error.response.data.message || "Something went wrong");
-    } else {
-      toast.error("⚠️ Network error. Please try again.");
-    }
-  }
-
-  setLoading(false);
   };
 
   return (
-    <div className="min-h-screen gradient-primary overflow-hidden relative">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-chat-pink/20 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-chat-blue/20 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }}></div>
-        <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-chat-orange/20 rounded-full blur-3xl animate-float" style={{ animationDelay: "4s" }}></div>
-      </div>
+    <div className="relative min-h-screen w-full bg-[#0B0D17] text-gray-100 overflow-hidden font-inter">
+        {/* Background Shapes */}
+        <div className="absolute top-0 left-0 w-full h-full z-0">
+            <div className="absolute top-[-20%] left-[-10%] w-[400px] h-[400px] bg-indigo-900/50 rounded-full filter blur-3xl opacity-30 animate-pulse"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-900/50 rounded-full filter blur-3xl opacity-30 animate-pulse animation-delay-4000"></div>
+        </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex items-center">
-        <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
-          {/* Left side */}
-          <div className="space-y-8 animate-slide-up">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 rounded-2xl gradient-secondary glow-purple">
-                <MessageCircle className="w-8 h-8 text-primary-foreground" />
-              </div>
-              <h1 className="text-3xl font-bold text-primary-foreground">ChatVibe</h1>
-            </div>
+        <VibeChatHeader />
 
-            <div className="relative">
-              <img 
-                src="/images/chat-hero3.png" 
-                alt="Chat community illustration" 
-                className="rounded-4xl shadow-2xl w-full max-w-md mx-auto lg:mx-0 animate-pulse-glow"
-              />
-            </div>
+        <main className="min-h-screen flex items-center justify-center p-4">
+            <div className="w-full max-w-md p-8 space-y-8 bg-gray-900/60 border border-gray-800 rounded-2xl shadow-2xl backdrop-blur-lg z-10">
+                <div className="text-center">
+                    <h1 className="text-4xl font-extrabold text-white">
+                        Create Account
+                    </h1>
+                    <p className="mt-2 text-gray-400">Join VibeChat today.</p>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="glass-card p-4 rounded-2xl text-center">
-                <Users className="w-8 h-8 text-chat-blue mx-auto mb-2" />
-                <p className="text-sm text-primary-foreground/90 font-medium">Group Chats</p>
-              </div>
-              <div className="glass-card p-4 rounded-2xl text-center">
-                <Sparkles className="w-8 h-8 text-chat-pink mx-auto mb-2" />
-                <p className="text-sm text-primary-foreground/90 font-medium">Rich Media</p>
-              </div>
-              <div className="glass-card p-4 rounded-2xl text-center">
-                <Zap className="w-8 h-8 text-chat-orange mx-auto mb-2" />
-                <p className="text-sm text-primary-foreground/90 font-medium">Real-time</p>
-              </div>
-            </div>
-          </div>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Username Input */}
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Users className="w-5 h-5 text-gray-400" />
+                        </span>
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            value={formData.username}
+                            onChange={handleInputChange}
+                            placeholder="Username"
+                            className="w-full h-12 pl-10 pr-4 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                        />
+                    </div>
 
-          {/* Right side - Form */}
-          <div className="flex justify-center lg:justify-end animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <Card className="glass-card w-full max-w-md lg:max-w-lg xl:max-w-xl p-6 lg:p-10">
-              <CardHeader className="text-center space-y-1">
-                <CardTitle className="text-2xl lg:text-3xl font-bold text-primary-foreground">
-                  Join ChatVibe
-                </CardTitle>
-                <CardDescription className="text-primary-foreground/70 text-sm lg:text-base">
-                  Create your account and start chatting
-                </CardDescription>
-              </CardHeader>
+                    {/* Email Input */}
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Mail className="w-5 h-5 text-gray-400" />
+                        </span>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="Email"
+                            className="w-full h-12 pl-10 pr-4 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                        />
+                    </div>
 
-              <CardContent>
-                <form className="space-y-6" onSubmit={handleSubmit}>
-                  {/* Username */}
-                  <div className="space-y-2">
-                    <label htmlFor="username" className="text-primary-foreground block text-sm lg:text-base">
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      placeholder="Choose a unique username"
-                      className="w-full rounded-md px-4 py-2 lg:py-3 lg:text-lg text-primary-foreground bg-primary-foreground/10 border border-primary-foreground/20 focus:outline-none focus:ring-2 focus:ring-chat-pink"
-                      required
-                    />
-                  </div>
+                    {/* Password Input */}
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Lock className="w-5 h-5 text-gray-400" />
+                        </span>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder="Password"
+                            className="w-full h-12 pl-10 pr-4 rounded-lg bg-gray-800 border border-gray-700 text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            required
+                        />
+                    </div>
 
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="text-primary-foreground block text-sm lg:text-base">
-                      Email
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="your@email.com"
-                      className="w-full rounded-md px-4 py-2 lg:py-3 lg:text-lg text-primary-foreground bg-primary-foreground/10 border border-primary-foreground/20 focus:outline-none focus:ring-2 focus:ring-chat-pink"
-                      required
-                    />
-                  </div>
-
-                  {/* Password */}
-                  <div className="space-y-2">
-                    <label htmlFor="password" className="text-primary-foreground block text-sm lg:text-base">
-                      Password
-                    </label>
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      placeholder="Create a strong password"
-                      className="w-full rounded-md px-4 py-2 lg:py-3 lg:text-lg text-primary-foreground bg-primary-foreground/10 border border-primary-foreground/20 focus:outline-none focus:ring-2 focus:ring-chat-pink"
-                      required
-                    />
-                  </div>
-
-                  {/* Submit */}
-                  <Button
-                    type="submit"
-                    size="lg"
-                    disabled={loading}
-                    className={`w-full text-base lg:text-lg font-semibold shadow-lg transition lg:py-4 flex items-center justify-center gap-2 ${
-                      loading ? "bg-gradient-to-r from-chat-pink via-chat-orange to-chat-blue animate-gradient" : "bg-chat-pink hover:bg-chat-pink/80"
-                    }`}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="animate-spin w-5 h-5" />
-                        Creating Account...
-                      </>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
+                    {/* Submit Button */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full h-12 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-lg hover:scale-[1.02] transform transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                        <>
+                            <LoaderCircle className="animate-spin" />
+                            <span>Creating Account...</span>
+                        </>
+                        ) : (
+                        "Create Account"
+                        )}
+                    </button>
                 </form>
 
-                <p className="mt-6 text-center text-sm lg:text-base text-primary-foreground/70">
-                  Already have an account?{" "}
-                  <a href="login" className="text-chat-pink hover:underline">
-                    Sign in
-                  </a>
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+                <footer className="text-center text-sm text-gray-400">
+                    Already have an account?{" "}
+                    <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
+                        Sign In
+                    </Link>
+                </footer>
+            </div>
+        </main>
+        
+        <VibeChatFooter />
     </div>
   );
 };
 
 export default SignUpPage;
+
