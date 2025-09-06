@@ -34,8 +34,8 @@ const VibeChatFooter = () => (
     <div className="container mx-auto px-4 text-center text-gray-500 flex flex-col sm:flex-row justify-between items-center gap-6">
       <p>&copy; {new Date().getFullYear()} VibeChat. All rights reserved.</p>
       <div className="flex items-center gap-5">
-        <Link href="#" className="hover:text-white transition-colors duration-200"><Github size={22} /></Link>
-        <Link href="#" className="hover:text-white transition-colors duration-200"><Linkedin size={22} /></Link>
+        <Link href="https://github.com/Jatin5233" className="hover:text-white transition-colors duration-200"><Github size={22} /></Link>
+        <Link href="https://www.linkedin.com/in/jatin-vanwani-153410329/" className="hover:text-white transition-colors duration-200"><Linkedin size={22} /></Link>
         <Link href="#" className="hover:text-white transition-colors duration-200"><Instagram size={22} /></Link>
       </div>
     </div>
@@ -51,17 +51,7 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, titl
 );
 
 export default function Home() {
-  const socket = io("http://localhost:3001")
   
-  useEffect(() => {
-    socket.on("welcome", (s) => {
-      console.log(s)
-    })
-    
-    return () => {
-      socket.disconnect()
-    }
-  }, [])
 
   return (
     <div className="min-h-screen w-full bg-[#0B0D17] text-gray-100 font-inter">
@@ -97,12 +87,7 @@ export default function Home() {
                     </div>
                     
                     {/* Hero showcase */}
-                    <div className="w-full max-w-5xl mx-auto h-64 md:h-80 bg-gradient-to-br from-gray-900/80 to-gray-800/80 rounded-2xl border border-gray-700/50 flex items-center justify-center backdrop-blur-sm shadow-2xl">
-                        <div className="text-center">
-                            <MessageSquare size={48} className="text-purple-400 mx-auto mb-4" />
-                            <img src="/images/ChatShow.png" alt="Hero Chat" className="mx-auto mb-4 w-32 h-32 object-contain" />
-                        </div>
-                    </div>
+                    
                 </div>
             </section>
 
