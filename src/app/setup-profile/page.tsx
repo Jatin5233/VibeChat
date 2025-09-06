@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import axios from "axios";
+import api from "@/utils/refreshAccess";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -38,7 +38,7 @@ export default function SetupProfilePage() {
       const formData = new FormData();
       formData.append("image", file); // We know 'file' is not null here
 
-      await axios.post("/api/users/profile", formData, {
+      await api.post("/api/users/profile", formData, {
         withCredentials: true,
       });
 
@@ -56,7 +56,7 @@ export default function SetupProfilePage() {
     setLoading(true);
     try {
       const formData = new FormData(); // Sending empty FormData
-      await axios.post("/api/users/profile", formData, {
+      await api.post("/api/users/profile", formData, {
         withCredentials: true,
       });
       toast.success("Default profile picture set!");

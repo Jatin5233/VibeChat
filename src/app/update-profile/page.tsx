@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import axios from "axios";
+import api from "@/utils/refreshAccess";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/socketConfig";
@@ -15,6 +15,7 @@ export default function ProfilePicturePage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPic, setCurrentPic] = useState<string | null>(null);
+  const [defaultLoading, setDefaultLoading] = useState(false);
   const { socket } = useSocket();
   const { theme } = useTheme();
   const t = themes[theme];
@@ -22,7 +23,7 @@ export default function ProfilePicturePage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get("/api/auth/me", {
+        const { data } = await api.get("/api/auth/me", {
           withCredentials: true,
         });
         setCurrentPic(data.user?.profilePic || data.profilePic);
@@ -49,11 +50,11 @@ export default function ProfilePicturePage() {
       const formData = new FormData();
       formData.append("image", file);
 
-      await axios.post("/api/users/profile", formData, {
+      await api.post("/api/users/profile", formData, {
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
-      const { data } = await axios.get("/api/auth/me", {
+      const { data } = await api.get("/api/auth/me", {
         withCredentials: true,
       });
 
@@ -67,6 +68,47 @@ export default function ProfilePicturePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+
+  const handleSetDefault = async () => {
+    setDefaultLoading(true);
+    try {
+      // Send an empty FormData object to trigger the backend's default logic
+      const formData = new FormData();
+      await api.post("/api/users/profile", formData, {
+        withCredentials: true,
+      });
+
+      // Get updated user data to reflect the change
+      const { data } = await api.get("/api/auth/me", {
+        withCredentials: true,
+      });
+
+      // Emit socket event with updated user data
+      if (socket && data.user) {
+        socket.emit("update_profile", data.user);
+      }
+
+      // Update local state
+      setCurrentPic(data.user?.profilePic || data.profilePic);
+      setFile(null);
+      setPreview(null);
+
+      toast.success("Default profile picture set!");
+      router.push("/profile");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to set default picture");
+    } finally {
+      setDefaultLoading(false);
+    }
+  };
+  
+ 
+  const clearSelection = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(null);
+    setPreview(null);
   };
 
   return (
@@ -102,31 +144,70 @@ export default function ProfilePicturePage() {
           )}
         </div>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className={`text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${t.card} ${t.hover} ${t.text}`}
-        />
+        <div className="w-full space-y-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className={`w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${t.card} ${t.hover} ${t.text}`}
+          />
+          
+         
+          {file && (
+            <button
+              onClick={clearSelection}
+              className={`w-full px-4 py-2 rounded-lg ${t.card} ${t.hover} text-sm`}
+            >
+              Clear Selection
+            </button>
+          )}
+
+         
+          <button
+            onClick={handleSetDefault}
+            disabled={defaultLoading || loading}
+            className={`w-full px-4 py-2 rounded-lg disabled:opacity-50 bg-gray-600 hover:bg-gray-500 text-white transition-colors`}
+          >
+            {defaultLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Setting Default...
+              </span>
+            ) : (
+              "Set as Default"
+            )}
+          </button>
+        </div>
 
         <div className="flex gap-3 w-full">
           <button
             onClick={() => router.back()}
             className={`flex-1 px-4 py-2 rounded-lg ${t.card} ${t.hover}`}
+ 
+            disabled={loading || defaultLoading}
           >
             Back
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            
+            disabled={loading || !file || defaultLoading}
             className={`flex-1 px-4 py-2 rounded-lg disabled:opacity-50 ${t.button}`}
           >
-            {loading ? "Saving..." : "Save"}
+            {loading ? (
+               <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </span>
+            ) : (
+              "Save"
+            )}
           </button>
         </div>
       </div>
-      {/* Loader Overlay */}
-      {loading && (
+
+     
+      {(loading || defaultLoading) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="flex flex-col items-center">
             <div
@@ -136,7 +217,8 @@ export default function ProfilePicturePage() {
               )} border-t-transparent rounded-full animate-spin`}
             ></div>
             <p className={`mt-4 text-lg font-semibold animate-pulse ${t.text}`}>
-              Updating profile...
+              {/* --- New: Conditional text for the loader --- */}
+              {defaultLoading ? "Setting default picture..." : "Updating profile..."}
             </p>
           </div>
         </div>
